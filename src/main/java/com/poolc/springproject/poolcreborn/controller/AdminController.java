@@ -1,12 +1,10 @@
 package com.poolc.springproject.poolcreborn.controller;
 
 import com.poolc.springproject.poolcreborn.payload.request.user.UserVo;
-import com.poolc.springproject.poolcreborn.payload.response.UserDto;
+import com.poolc.springproject.poolcreborn.payload.response.DetailedUserDto;
 import com.poolc.springproject.poolcreborn.repository.UserRepository;
 import com.poolc.springproject.poolcreborn.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +21,9 @@ public class AdminController {
     private final UserRepository userRepository;
 
     @GetMapping()
-    public ResponseEntity<List<UserDto>> admin(@RequestParam int page, @RequestParam int size) {
-        List<UserDto> userDtos = userService.findAllUsers(page, size);
-        return new ResponseEntity<>(userDtos, HttpStatus.OK);
+    public ResponseEntity<List<DetailedUserDto>> admin(@RequestParam int page, @RequestParam int size) {
+        List<DetailedUserDto> detailedUserDtos = userService.findAllUsersByAdmin(page, size);
+        return new ResponseEntity<>(detailedUserDtos, HttpStatus.OK);
     }
 
     @PatchMapping("/add")

@@ -1,11 +1,14 @@
 package com.poolc.springproject.poolcreborn.service;
 
-import com.poolc.springproject.poolcreborn.model.ERole;
-import com.poolc.springproject.poolcreborn.model.User;
+import com.poolc.springproject.poolcreborn.model.search.SearchCategory;
+import com.poolc.springproject.poolcreborn.model.user.User;
+import com.poolc.springproject.poolcreborn.payload.request.search.SearchRequest;
 import com.poolc.springproject.poolcreborn.payload.request.user.LoginRequest;
 import com.poolc.springproject.poolcreborn.payload.request.user.SignupRequest;
 import com.poolc.springproject.poolcreborn.payload.request.user.UserUpdateRequest;
+import com.poolc.springproject.poolcreborn.payload.response.DetailedUserDto;
 import com.poolc.springproject.poolcreborn.payload.response.JwtResponse;
+import com.poolc.springproject.poolcreborn.payload.response.SimpleUserDto;
 import com.poolc.springproject.poolcreborn.payload.response.UserDto;
 import com.poolc.springproject.poolcreborn.repository.UserRepository;
 import com.poolc.springproject.poolcreborn.security.jwt.JwtUtils;
@@ -33,9 +36,7 @@ public class UserService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
     private final UserRepository userRepository;
-
     private final PasswordEncoder passwordEncoder;
-
     private final UserMapper userMapper;
 
     public JwtResponse authenticateUser(LoginRequest loginRequest) {
@@ -83,27 +84,60 @@ public class UserService {
         user.setClubMember(true);
     }
 
-    public List<UserDto> findAllUsers(int page, int size) {
+    public List<DetailedUserDto> findAllUsersByAdmin(int page, int size) {
         PageRequest pr = PageRequest.of(page, size);
-        List<UserDto> userDtos = new ArrayList<>();
         Page<User> users = userRepository.findAll(pr);
         if (users.getNumberOfElements() == 0) {
             return null;
         }
-        for (User user : users) {
-            UserDto userDto = new UserDto();
-            userMapper.buildUserDtoFromUser(user, userDto);
-            userDtos.add(userDto);
+        return users.stream()
+                .map(u -> userMapper.buildDetailedUserDtoFromUser(u))
+                .collect(Collectors.toList());
+    }
+
+    public List<SimpleUserDto> findAllUsersByClubMember(int page, int size) {
+        PageRequest pr = PageRequest.of(page, size);
+        Page<User> users = userRepository.findAll(pr);
+        if (users.getNumberOfElements() == 0) {
+            return new ArrayList<>();
         }
-        return userDtos;
+        return users.stream()
+                .filter(User::isClubMember)
+                .map(u -> userMapper.buildSimpleUserDtoFromUser(u))
+                .collect(Collectors.toList());
     }
 
-    public UserDto findUser(String username) {
+    public UserDto findUserByClubMember(String username) {
         User user = userRepository.findByUsername(username).get();
-        UserDto userDto = new UserDto();
-        userMapper.buildUserDtoFromUser(user, userDto);
-        return userDto;
+        return userMapper.buildUserDtoFromUser(user);
     }
+    public List<SimpleUserDto> searchUser(SearchRequest searchRequest, int page, int size) {
+        PageRequest pr = PageRequest.of(page, size);
+        return processSearchRequest(searchRequest, pr);
+    }
+    private List<SimpleUserDto> processSearchRequest(SearchRequest searchRequest, PageRequest pr) {
+        Page<User> searchUsers;
+        String keyword = searchRequest.getKeyword();
+        switch (searchRequest.getSearchCategory()) {
+            case USERNAME:
+                searchUsers = userRepository.findByUsernameContaining(keyword, pr);
+                break;
+            case NAME:
+                searchUsers = userRepository.findByNameContaining(keyword, pr);
+                break;
+            case MAJOR:
+                searchUsers = userRepository.findByMajorContaining(keyword, pr);
+                break;
+            case ISADMIN:
+                searchUsers = userRepository.findByIsAdminTrue(pr);
+                break;
+            case ISCLUBMEMBER:
+                searchUsers = userRepository.findByIsClubMemberTrue(pr);
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + searchRequest.getSearchCategory());
+        }
+        return searchUsers.stream().map(u -> userMapper.buildSimpleUserDtoFromUser(u)).collect(Collectors.toList());
 
-
+    }
 }

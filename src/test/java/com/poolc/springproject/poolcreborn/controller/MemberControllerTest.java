@@ -1,8 +1,7 @@
 package com.poolc.springproject.poolcreborn.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.poolc.springproject.poolcreborn.model.SchoolStatus;
-import com.poolc.springproject.poolcreborn.model.User;
+import com.poolc.springproject.poolcreborn.model.user.SchoolStatus;
 import com.poolc.springproject.poolcreborn.payload.request.user.UserDeleteRequest;
 import com.poolc.springproject.poolcreborn.payload.request.user.UserUpdateRequest;
 import com.poolc.springproject.poolcreborn.repository.UserRepository;
@@ -34,27 +33,10 @@ public class MemberControllerTest extends TestCase {
 
     @Autowired
     private MockMvc mockMvc;
-
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
     private  UserRepository userRepository;
-
-    private User createUser() {
-        User user = new User(
-                "becooq81",
-                "hello12345",
-                "지니",
-                "jinny8748@gmail.com",
-                "010-2341-5243",
-                "computer science",
-                2015232333,
-                "hello"
-        );
-        userRepository.save(user);
-        return user;
-    }
-
 
 
     @Test
@@ -77,8 +59,6 @@ public class MemberControllerTest extends TestCase {
     @DisplayName("회원 정보 수정 성공")
     @WithMockUser(username = "becooq81", password = "hello12345")
     public void update_test() throws Exception {
-        createUser();
-
         UserUpdateRequest updateRequest = UserUpdateRequest.builder()
                 .password("newpassword")
                 .confirmPassword("newpassword")
@@ -103,8 +83,6 @@ public class MemberControllerTest extends TestCase {
     @WithMockUser(username = "becooq81", password = "hello12345")
     public void update_test_wrong_password() throws Exception {
 
-        createUser();
-
         UserUpdateRequest updateRequest = UserUpdateRequest.builder()
                 .password("newpassword")
                 .confirmPassword("wrongpassword")
@@ -126,7 +104,6 @@ public class MemberControllerTest extends TestCase {
     @WithMockUser(username = "becooq81", password = "hello12345")
     @DisplayName("회원 정보 수정 예외: 전화번호 포맷 일치 X")
     public void update_test_wrong_mobileNumber() throws Exception {
-        createUser();
 
         UserUpdateRequest updateRequest = UserUpdateRequest.builder()
                 .mobileNumber("372-38812")
@@ -164,8 +141,6 @@ public class MemberControllerTest extends TestCase {
     @DisplayName("회원 탈퇴 성공")
     @WithMockUser(username = "becooq81", password = "hello12345")
     public void delete_test() throws Exception {
-        createUser();
-
         UserDeleteRequest deleteRequest = UserDeleteRequest.builder()
                 .message("탈퇴를 확인합니다.").build();
 
@@ -178,16 +153,12 @@ public class MemberControllerTest extends TestCase {
                 .andExpect(status().isOk())
                 .andDo(print()
                 );
-
-
     }
 
     @Test
     @WithMockUser(username = "becooq81", password = "hello12345")
     @DisplayName("회원 탈퇴 실패: 틀린 메시지")
     public void delete_test_wrong_message() throws Exception {
-        createUser();
-
         UserDeleteRequest deleteRequest = UserDeleteRequest.builder()
                 .message("틀린 문구").build();
 
