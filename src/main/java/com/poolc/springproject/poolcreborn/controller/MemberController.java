@@ -4,8 +4,8 @@ import com.poolc.springproject.poolcreborn.model.user.User;
 import com.poolc.springproject.poolcreborn.payload.request.search.SearchRequest;
 import com.poolc.springproject.poolcreborn.payload.request.user.UserUpdateRequest;
 import com.poolc.springproject.poolcreborn.payload.request.user.UserDeleteRequest;
-import com.poolc.springproject.poolcreborn.payload.response.SimpleUserDto;
-import com.poolc.springproject.poolcreborn.payload.response.UserDto;
+import com.poolc.springproject.poolcreborn.payload.response.user.UserRoleDto;
+import com.poolc.springproject.poolcreborn.payload.response.user.UserDto;
 import com.poolc.springproject.poolcreborn.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,6 +18,7 @@ import javax.validation.constraints.Positive;
 import java.util.List;
 
 import static com.poolc.springproject.poolcreborn.security.SecurityUtil.getLoginUsername;
+import com.poolc.springproject.poolcreborn.util.Message;
 
 @RestController
 @RequiredArgsConstructor
@@ -26,8 +27,8 @@ public class MemberController {
     private final UserService userService;
 
     @GetMapping("/members")
-    public ResponseEntity<List<SimpleUserDto>> findAllUsers(@RequestParam @Positive int page, @RequestParam @Positive int size) {
-        List<SimpleUserDto> userDtos = userService.findAllUsersByClubMember(page, size);
+    public ResponseEntity<List<UserRoleDto>> findAllUsers(@RequestParam @Positive int page, @RequestParam @Positive int size) {
+        List<UserRoleDto> userDtos = userService.findAllUsersByClubMember(page, size);
         return new ResponseEntity<>(userDtos, HttpStatus.OK);
     }
 
@@ -48,14 +49,15 @@ public class MemberController {
     public ResponseEntity<?> deleteUser(@Valid @RequestBody UserDeleteRequest userDeleteRequest) {
         String username = getLoginUsername();
         userService.deleteUser(username);
-        return ResponseEntity.ok("The user is successfully deleted.");
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(Message.SUCCESSFUL_DELETE_USER);
     }
 
     @GetMapping("/members/search")
-    public ResponseEntity<List<SimpleUserDto>> searchUser(@Valid @RequestBody SearchRequest searchRequest,
-                                                 @RequestParam @Positive int page,
-                                                 @RequestParam @Positive int size) {
-        List<SimpleUserDto> users = userService.searchUser(searchRequest, page, size);
+    public ResponseEntity<List<UserRoleDto>> searchUser(@Valid @RequestBody SearchRequest searchRequest,
+                                                        @RequestParam @Positive int page,
+                                                        @RequestParam @Positive int size) {
+        List<UserRoleDto> users = userService.searchUser(searchRequest, page, size);
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
 

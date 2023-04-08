@@ -4,8 +4,8 @@ import com.poolc.springproject.poolcreborn.repository.UserRepository;
 import com.poolc.springproject.poolcreborn.security.jwt.AuthTokenFilter;
 import com.poolc.springproject.poolcreborn.security.jwt.JwtAuthEntryPoint;
 import com.poolc.springproject.poolcreborn.security.service.UserDetailsServiceImpl;
+import com.poolc.springproject.poolcreborn.util.CustomMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,6 +29,8 @@ public class SecurityConfig {
     private final JwtAuthEntryPoint unauthorizedHandler;
     private final UserRepository userRepository;
 
+    @Bean
+    public CustomMapper customMapper() { return new CustomMapper(); }
     @Bean
     public  UserDetailsServiceImpl userDetailsService() {
         return new UserDetailsServiceImpl(userRepository);
@@ -69,10 +71,11 @@ public class SecurityConfig {
                 .and()
                 .csrf().disable()
                 .authorizeRequests()
-                    .antMatchers("/login", "/signup", "/").permitAll()
                     .antMatchers("/my-info").hasAnyAuthority("ROLE_CLUB_MEMBER", "ROLE_ADMIN", "ROLE_USER")
-                    .antMatchers("/**/new").hasAnyAuthority("ROLE_CLUB_MEMBER", "ROLE_ADMIN")
+                    .antMatchers("/**/new", "/activity/**/participants", "/activity/**/participants/**").hasAnyAuthority("ROLE_CLUB_MEMBER", "ROLE_ADMIN")
                     .antMatchers("/admin", "/admin/**").hasAnyAuthority("ROLE_ADMIN")
+                    .antMatchers("/login/confirm/mail").hasAnyAuthority("ROLE_USER")
+                    .antMatchers("/login", "/signup", "/activity", "/activity/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .securityContext((securityContext) -> securityContext

@@ -13,9 +13,11 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.poolc.springproject.poolcreborn.util.Message.SUCCESSFUL_SIGNUP_USER;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 @SpringBootTest
 @RunWith(SpringRunner.class)
@@ -31,7 +33,7 @@ public class SignupTest {
 
     private static SignupRequest createSignupRequest() {
         SignupRequest signupRequest = SignupRequest.builder()
-                .username("becooq81")
+                .username("jinny4823")
                 .password("hello12345")
                 .confirmPassword("hello12345")
                 .name("지니")
@@ -53,7 +55,7 @@ public class SignupTest {
                         .content(content)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
+                .andExpect(content().string(SUCCESSFUL_SIGNUP_USER))
                 .andDo(print());
 
     }

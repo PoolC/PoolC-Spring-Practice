@@ -1,15 +1,18 @@
 package com.poolc.springproject.poolcreborn.model.user;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.poolc.springproject.poolcreborn.model.activity.Activity;
+import com.poolc.springproject.poolcreborn.model.participation.Participation;
 import com.poolc.springproject.poolcreborn.validator.IncludeCharInt;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.collections4.*;
 
 import javax.persistence.*;
 import javax.validation.constraints.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter @Setter
@@ -59,9 +62,13 @@ public class User {
     private boolean isClubMember;
     private boolean isAdmin;
 
-    @JsonIgnore
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
+    private List<Activity> leadingSeminars = new ArrayList<>();
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
+    private List<Activity> leadingStudies = new ArrayList<>();
+
     @OneToMany(mappedBy = "user")
-    private List<Activity> activities = new ArrayList<>();
+    private Set<Participation> participationList = new HashSet<>();
 
     public User(String username, String password, String name, String email, String mobileNumber, String major, int studentId, String description) {
         this.username = username;
@@ -82,7 +89,42 @@ public class User {
         this.isMember = true;
         this.isAdmin = false;
         this.isClubMember = false;
+
     }
 
+    public void addParticipating(Activity activity) {
+        this.participationList.add(new Participation(this, activity));
+    }
+
+    public int getTotalAttendingHours() {
+        return this.participationList.stream()
+                .map(Participation::getActivity)
+                .mapToInt(Activity::getTotalHours)
+                .sum();
+    }
+
+    public boolean isQualified() {
+        int leadingHours = ListUtils.union(leadingSeminars, leadingStudies).stream()
+                .mapToInt(Activity::getTotalHours)
+                .sum();
+        return this.getTotalAttendingHours() >= 6 || this.isAdmin || leadingHours >= 4;
+    }
+    public void addLeadingStudy(Activity activity) {
+        this.leadingStudies.add(activity);
+    }
+    public void addLeadingSeminar(Activity activity) {
+        this.leadingSeminars.add(activity);
+    }
+
+    public int getLeadingStudyHours() {
+        return this.leadingStudies.stream()
+                .mapToInt(Activity::getTotalHours)
+                .sum();
+    }
+    public int getLeadingSeminarHours() {
+        return this.leadingSeminars.stream()
+                .mapToInt(Activity::getTotalHours)
+                .sum();
+    }
 
 }
