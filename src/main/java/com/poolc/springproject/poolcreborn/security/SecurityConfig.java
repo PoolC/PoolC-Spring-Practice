@@ -8,6 +8,7 @@ import com.poolc.springproject.poolcreborn.util.CustomMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -72,8 +73,14 @@ public class SecurityConfig {
                 .csrf().disable()
                 .authorizeRequests()
                     .antMatchers("/my-info").hasAnyAuthority("ROLE_CLUB_MEMBER", "ROLE_ADMIN", "ROLE_USER")
-                    .antMatchers("/**/new", "/activity/**/participants", "/activity/**/participants/**").hasAnyAuthority("ROLE_CLUB_MEMBER", "ROLE_ADMIN")
-                    .antMatchers("/admin", "/admin/**").hasAnyAuthority("ROLE_ADMIN")
+                    .antMatchers(HttpMethod.DELETE, "/book/**")
+                        .hasAnyAuthority("ROLE_ADMIN")
+                    .antMatchers("/admin", "/admin/**", "/book/new", "/book/api/**")
+                        .hasAnyAuthority("ROLE_ADMIN")
+                    .antMatchers(HttpMethod.GET, "/book", "/book/**")
+                        .hasAnyAuthority("ROLE_CLUB_MEMBER", "ROLE_ADMIN")
+                    .antMatchers("/activity/new", "/activity/**/participants", "/activity/**/participants/**", "/library", "/library/**")
+                        .hasAnyAuthority("ROLE_CLUB_MEMBER", "ROLE_ADMIN")
                     .antMatchers("/login/confirm/mail").hasAnyAuthority("ROLE_USER")
                     .antMatchers("/login", "/signup", "/activity", "/activity/**").permitAll()
                 .anyRequest().authenticated()

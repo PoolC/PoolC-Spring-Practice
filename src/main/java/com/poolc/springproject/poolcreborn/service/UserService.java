@@ -1,5 +1,6 @@
 package com.poolc.springproject.poolcreborn.service;
 
+import com.poolc.springproject.poolcreborn.exception.InvalidRequestException;
 import com.poolc.springproject.poolcreborn.model.user.User;
 import com.poolc.springproject.poolcreborn.payload.request.search.SearchRequest;
 import com.poolc.springproject.poolcreborn.payload.request.user.LoginRequest;
@@ -13,6 +14,7 @@ import com.poolc.springproject.poolcreborn.payload.response.user.UserDto;
 import com.poolc.springproject.poolcreborn.repository.UserRepository;
 import com.poolc.springproject.poolcreborn.security.jwt.JwtUtils;
 import com.poolc.springproject.poolcreborn.security.service.UserDetailsImpl;
+import com.poolc.springproject.poolcreborn.util.Message;
 import com.poolc.springproject.poolcreborn.util.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,7 +29,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -62,26 +63,29 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public User updateUserInfo(UserUpdateRequest userUpdateRequest, String currentUsername) {
-        Optional<User> optionalUser =  userRepository.findByUsername(currentUsername);
-        User user = optionalUser.orElse(null);
-        userMapper.updateUserInfoFromRequest(userUpdateRequest, user);
+    public User updateUser(UserUpdateRequest userUpdateRequest, String currentUsername) throws InvalidRequestException {
+        User user =  userRepository.findByUsername(currentUsername)
+                        .orElseThrow(() -> new InvalidRequestException(Message.USER_DOES_NOT_EXIST));
+        userMapper.updateUserFromRequest(userUpdateRequest, user);
         return user;
     }
 
-    public void deleteUser(String username) {
-        Optional<User> user = userRepository.findByUsername(username);
-        user.ifPresent(u -> userRepository.deleteById(u.getId()));
+    public void deleteUser(String username) throws InvalidRequestException {
+        User user = userRepository.findByUsername(username)
+                        .orElseThrow(() -> new InvalidRequestException(Message.USER_DOES_NOT_EXIST));
+        userRepository.deleteById(user.getId());
     }
 
-    public void addAdminRole(String username) {
-        Optional<User> user = userRepository.findByUsername(username);
-        user.ifPresent(u -> u.setAdmin(true));
+    public void addAdminRole(String username) throws InvalidRequestException{
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new InvalidRequestException(Message.USER_DOES_NOT_EXIST));
+        user.setAdmin(true);
     }
 
-    public void addClubMemberRole(String username) {
-        Optional<User> user = userRepository.findByUsername(username);
-        user.ifPresent(u -> u.setClubMember(true));
+    public void addClubMemberRole(String username) throws InvalidRequestException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new InvalidRequestException(Message.USER_DOES_NOT_EXIST));
+        user.setClubMember(true);
     }
 
     public List<DetailedUserDto> findAllUsersByAdmin(int page, int size) {
@@ -91,7 +95,7 @@ public class UserService {
             return null;
         }
         return users.stream()
-                .map(u -> userMapper.buildDetailedUserDtoFromUser(u))
+                .map(userMapper::buildDetailedUserDtoFromUser)
                 .collect(Collectors.toList());
     }
 
@@ -103,12 +107,13 @@ public class UserService {
         }
         return users.stream()
                 .filter(User::isClubMember)
-                .map(u -> userMapper.buildUserRoleDtoFromUser(u))
+                .map(userMapper::buildUserRoleDtoFromUser)
                 .collect(Collectors.toList());
     }
 
-    public UserDto findUserByClubMember(String username) {
-        User user = userRepository.findByUsername(username).orElse(null);
+    public UserDto findUserByClubMember(String username) throws InvalidRequestException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new InvalidRequestException(Message.USER_DOES_NOT_EXIST));
         return userMapper.buildUserDtoFromUser(user);
     }
     public List<UserRoleDto> searchUser(SearchRequest searchRequest, int page, int size) {
@@ -138,7 +143,7 @@ public class UserService {
                 throw new IllegalStateException("Unexpected value: " + searchRequest.getSearchCategory());
         }
         return searchUsers.stream()
-                .map(u -> userMapper.buildUserRoleDtoFromUser(u))
+                .map(userMapper::buildUserRoleDtoFromUser)
                 .collect(Collectors.toList());
 
     }
@@ -150,7 +155,7 @@ public class UserService {
         }
         return users.stream()
                 .filter(User::isClubMember)
-                .map(u -> userMapper.buildUserHoursDtoFromUser(u))
+                .map(userMapper::buildUserHoursDtoFromUser)
                 .collect(Collectors.toList());
     }
 }

@@ -27,30 +27,46 @@ public class MemberController {
     private final UserService userService;
 
     @GetMapping("/members")
-    public ResponseEntity<List<UserRoleDto>> findAllUsers(@RequestParam @Positive int page, @RequestParam @Positive int size) {
-        List<UserRoleDto> userDtos = userService.findAllUsersByClubMember(page, size);
-        return new ResponseEntity<>(userDtos, HttpStatus.OK);
+    public ResponseEntity<List<UserRoleDto>> findAllUsers(@RequestParam @Positive int page,
+                                                          @RequestParam @Positive int size) {
+        List<UserRoleDto> userDtoList = userService.findAllUsersByClubMember(page, size);
+        return new ResponseEntity<>(userDtoList, HttpStatus.OK);
     }
 
     @GetMapping("/member/{username}")
-    public ResponseEntity<UserDto> viewUser(@PathVariable("username") String username) {
-        UserDto userDto = userService.findUserByClubMember(username);
-        return new ResponseEntity<>(userDto, HttpStatus.OK);
+    public ResponseEntity<?> viewUser(@PathVariable("username") String username) {
+        try {
+            UserDto userDto = userService.findUserByClubMember(username);
+            return new ResponseEntity<>(userDto, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        }
     }
     @PatchMapping("/my-info")
-    public ResponseEntity<User> updateUser(@Valid @RequestBody UserUpdateRequest userUpdateRequest) {
+    public ResponseEntity<?> updateUser(@Valid @RequestBody UserUpdateRequest userUpdateRequest) {
         String username = getLoginUsername();
-        User user = userService.updateUserInfo(userUpdateRequest, username);
-
-        return new ResponseEntity<>(user, HttpStatus.OK);
+        try {
+            User user = userService.updateUser(userUpdateRequest, username);
+            return new ResponseEntity<>(user, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/my-info")
     public ResponseEntity<?> deleteUser(@Valid @RequestBody UserDeleteRequest userDeleteRequest) {
         String username = getLoginUsername();
-        userService.deleteUser(username);
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(Message.SUCCESSFUL_DELETE_USER);
+        try {
+            userService.deleteUser(username);
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(Message.SUCCESSFUL_DELETE_USER);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        }
+
     }
 
     @GetMapping("/members/search")

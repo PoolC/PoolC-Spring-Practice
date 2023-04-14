@@ -1,6 +1,6 @@
 package com.poolc.springproject.poolcreborn.service;
 
-import com.poolc.springproject.poolcreborn.exception.InvalidUserException;
+import com.poolc.springproject.poolcreborn.exception.InvalidRequestException;
 import com.poolc.springproject.poolcreborn.model.activity.Activity;
 import com.poolc.springproject.poolcreborn.model.participation.Participation;
 import com.poolc.springproject.poolcreborn.model.user.User;
@@ -27,26 +27,34 @@ public class ParticipationService {
     private final ParticipationRepository participationRepository;
     private final UserRepository userRepository;
     private final ActivityRepository activityRepository;
-    public void saveParticipation(User user, Activity activity) {
+    public void saveParticipation(User user, Activity activity, ParticipationRequest request) {
          if (user.isClubMember()) {
              Participation participation = new Participation();
              participation.setUser(user);
              participation.setActivity(activity);
+             participation.setApproved(request.getIsApproved());
              activity.addParticipant(user);
              user.addParticipating(activity);
+             if (!request.getIsApproved()) participation.setReason(request.getReason());
              participationRepository.save(participation);
          }
     }
-    public void removeParticipation(String username, Long activityId) {
-        User user = userRepository.findByUsername(username).orElse(null);
-        Activity activity = activityRepository.findById(activityId).orElse(null);
+    public void removeParticipation(String username, Long activityId) throws InvalidRequestException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new InvalidRequestException(Message.USER_DOES_NOT_EXIST));
+        Activity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new InvalidRequestException(Message.ACTIVITY_DOES_NOT_EXIST));
         if (user != null && activity != null) {
-            Participation participation = participationRepository.findByUserAndActivity(user, activity).orElse(null);
+            Participation participation = participationRepository.findByUserAndActivity(user, activity)
+                    .orElseThrow(() -> new InvalidRequestException(Message.PARTICIPATION_DOES_NOT_EXIST));
+            activity.removeParticipant(participation);
+            user.removeParticipating(participation);
             participationRepository.deleteById(participation.getId());
         }
     }
-    public Participation findParticipation(String username, Long activityId) {
-        User user = userRepository.findByUsername(username).orElse(null);
+    public Participation findParticipation(String username, Long activityId) throws InvalidRequestException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new InvalidRequestException(Message.USER_DOES_NOT_EXIST));
         Activity activity = activityRepository.findById(activityId).orElse(null);
         if (user == null || activity == null) { return null; }
         else {
@@ -57,8 +65,7 @@ public class ParticipationService {
         User user = userRepository.findByUsername(requestedParticipationDto.getUsername()).orElse(null);
         Activity activity = activityRepository.findByTitle(requestedParticipationDto.getActivityTitle()).orElse(null);
         if (user != null && activity != null && activity.isAvailable()) {
-            Participation participation = participationRepository.findByUserAndActivity(user, activity).get();
-            participation.setApproved(true);
+            participationRepository.findByUserAndActivity(user, activity).ifPresent(p -> p.setApproved(true));
         }
     }
     public void approveParticipationRequestList(List<RequestedParticipationDto> requestedParticipationDtoList) {
@@ -67,18 +74,18 @@ public class ParticipationService {
                 .forEach(this::approveParticipationRequest);
     }
 
-    public void signupParticipation(String username, String activityTitle, ParticipationRequest request) throws InvalidUserException{
+    public void signupParticipation(String username, String activityTitle, ParticipationRequest request) throws InvalidRequestException{
         Activity activity = activityRepository.findByTitle(activityTitle).orElse(null);
         User user = userRepository.findByUsername(username).orElse(null);
         if (participationRepository.existsByUserAndActivity(user, activity)) {
-            throw new InvalidUserException(Message.FAIL_SIGNUP_ACTIVITY);
+            throw new InvalidRequestException(Message.FAIL_SIGNUP_ACTIVITY);
         }
         else if (activity != null && user != null) {
-            saveParticipation(user, activity);
+            saveParticipation(user, activity, request);
         }
     }
     public RequestedParticipationDto buildRequestedParticipationDtoFromRequestedParticipation(Participation participation) {
-        if (participation == null || !participation.isApproved()) {
+        if (participation == null || participation.isApproved()) {
             return null;
         }
         RequestedParticipationDto requestedParticipationDto = new RequestedParticipationDto();
@@ -95,7 +102,7 @@ public class ParticipationService {
         if (activity != null) {
             List<Participation> requests = participationRepository.findByActivityTitleAndIsApproved(activity.getTitle(), false);
             return requests.stream()
-                    .map(r -> buildRequestedParticipationDtoFromRequestedParticipation(r))
+                    .map(this::buildRequestedParticipationDtoFromRequestedParticipation)
                     .collect(Collectors.toList());
         } else {
             return new ArrayList<>();

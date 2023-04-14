@@ -1,6 +1,5 @@
 package com.poolc.springproject.poolcreborn.controller;
 
-import com.poolc.springproject.poolcreborn.exception.InvalidUserException;
 import com.poolc.springproject.poolcreborn.model.activity.Activity;
 import com.poolc.springproject.poolcreborn.payload.request.activity.ActivityRequest;
 import com.poolc.springproject.poolcreborn.payload.request.activity.ActivityUpdateRequest;
@@ -13,7 +12,6 @@ import com.poolc.springproject.poolcreborn.service.ActivityService;
 import com.poolc.springproject.poolcreborn.service.ParticipationService;
 import com.poolc.springproject.poolcreborn.util.CustomMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,33 +38,36 @@ public class ActivityController {
     public ResponseEntity<?> registerActivity(@RequestBody @Valid ActivityRequest activityRequest) {
         String username = getLoginUsername();
         activityService.saveActivity(activityRequest, username);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Message.SUCCESSFUL_CREATED_ACTIVITY);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(Message.SUCCESSFUL_CREATED_ACTIVITY);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ActivityDto> viewActivity(@PathVariable("id") @Min(1) Long currentActivityId) {
-        Activity activity = activityRepository.findById(currentActivityId).orElse(null);
+    public ResponseEntity<ActivityDto> viewActivity(@PathVariable("id") @Min(1) Long activityId) {
+        Activity activity = activityRepository.findById(activityId).orElse(null);
         return new ResponseEntity<>(customMapper.buildActivityDtoFromActivity(activity), HttpStatus.OK);
     }
 
     @PatchMapping("/{id}/edit")
-    public ResponseEntity<?> updateActivity(@PathVariable("id") @Min(1) Long currentActivityId, @RequestBody @Valid ActivityUpdateRequest activityUpdateRequest) {
+    public ResponseEntity<?> updateActivity(@PathVariable("id") @Min(1) Long activityId,
+                                            @RequestBody @Valid ActivityUpdateRequest activityUpdateRequest) {
         String username = getLoginUsername();
 
         try {
-            activityService.updateActivity(username, activityUpdateRequest, currentActivityId);
+            activityService.updateActivity(username, activityUpdateRequest, activityId);
             return ResponseEntity.status(HttpStatus.OK)
                     .body(Message.SUCCESSFUL_UPDATE_ACTIVITY);
-        } catch (InvalidUserException e) {
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(e.getMessage());
         }
     }
 
     @PostMapping("/{id}/participants")
-    public ResponseEntity<?> signupForActivity(@PathVariable("id") @Min(1) Long currentActivityId,
+    public ResponseEntity<?> signupForActivity(@PathVariable("id") @Min(1) Long activityId,
                                                 @RequestBody @Valid ParticipationRequest request) {
-        Activity activity = activityRepository.findById(currentActivityId).orElse(null);
+        Activity activity = activityRepository.findById(activityId).orElse(null);
         String username = getLoginUsername();
 
         try {
@@ -79,20 +80,20 @@ public class ActivityController {
         }
     }
     @GetMapping("/{id}/participants/requested")
-    public List<RequestedParticipationDto> viewParticipationRequests(@PathVariable("id") @Min(1) Long currentActivityId) {
+    public List<RequestedParticipationDto> viewParticipationRequests(@PathVariable("id") @Min(1) Long activityId) {
         String username = getLoginUsername();
-        Activity activity = activityRepository.findById(currentActivityId).get();
+        Activity activity = activityRepository.findById(activityId).get();
         if (activity.getUser().getUsername().equals(username)) {
-            return participationService.viewRequestedParticipation(currentActivityId);
+            return participationService.viewRequestedParticipation(activityId);
         }
         return new ArrayList<>();
     }
 
     @PostMapping("/{id}/participants/requested")
-    public ResponseEntity<?> approveParticipants(@PathVariable("id") @Min(1) Long currentActivityId,
+    public ResponseEntity<?> approveParticipants(@PathVariable("id") @Min(1) Long activityId,
                                                  @RequestBody @Valid List<RequestedParticipationDto> requests) throws Exception {
         String username = getLoginUsername();
-        Activity activity = activityRepository.findById(currentActivityId).get();
+        Activity activity = activityRepository.findById(activityId).get();
 
         HttpStatus httpStatus;
         String message;
@@ -111,18 +112,22 @@ public class ActivityController {
     }
 
     @PatchMapping("/{id}/participants")
-    public ResponseEntity<?> removeParticipants(@PathVariable("id") @Min(1) Long currentActivityId,
+    public ResponseEntity<?> removeParticipants(@PathVariable("id") @Min(1) Long activityId,
                                                 @RequestBody @Valid ParticipationDeleteRequest deleteRequest) {
         String username = getLoginUsername();
-        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
-        String message = Message.PARTICIPATION_DELETE_DENIED;
 
-        if (participationService.findParticipation(username, currentActivityId) != null) {
-            participationService.removeParticipation(username, currentActivityId);
-            httpStatus = HttpStatus.OK;
-            message = Message.SUCCESSFUL_DELETE_PARTICIPATION;
+        try {
+            if (participationService.findParticipation(username, activityId) != null) {
+                participationService.removeParticipation(username, activityId);
+                return ResponseEntity.status(HttpStatus.OK)
+                        .body(Message.SUCCESSFUL_DELETE_PARTICIPATION);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Message.PARTICIPATION_DELETE_DENIED);
+            }
+        } catch (Exception e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
         }
-        return ResponseEntity.status(httpStatus)
-                .body(message);
     }
 }

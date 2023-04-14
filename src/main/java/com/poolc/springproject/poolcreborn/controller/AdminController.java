@@ -25,32 +25,37 @@ public class AdminController {
 
     @GetMapping()
     public ResponseEntity<List<DetailedUserDto>> admin(@RequestParam int page, @RequestParam int size) {
-        List<DetailedUserDto> detailedUserDtos = userService.findAllUsersByAdmin(page, size);
-        return new ResponseEntity<>(detailedUserDtos, HttpStatus.OK);
+        List<DetailedUserDto> detailedUserDtoList = userService.findAllUsersByAdmin(page, size);
+        return new ResponseEntity<>(detailedUserDtoList, HttpStatus.OK);
     }
 
     @PatchMapping("/roles")
     public ResponseEntity<?> addRoles(@Valid @RequestBody List<UserVo> userVos) {
-        for (UserVo userVo : userVos) {
-            String username = userVo.getUsername();
-            if (!userRepository.existsByUsername(username)) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        try {
+            for (UserVo userVo : userVos) {
+                String username = userVo.getUsername();
+                if (!userRepository.existsByUsername(username)) {
+                    return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                }
+                if (userVo.isAdmin()) {
+                    userService.addAdminRole(username);
+                }
+                if (userVo.isClubMember()) {
+                    userService.addClubMemberRole(username);
+                }
             }
-            if (userVo.isAdmin()) {
-                userService.addAdminRole(username);
-            }
-            if (userVo.isClubMember()) {
-                userService.addClubMemberRole(username);
-            }
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(Message.SUCCESSFUL_ROLE_ADD);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
         }
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(Message.SUCCESSFUL_ROLE_ADD);
     }
 
     @GetMapping("/hours")
     public ResponseEntity<List<UserHoursDto>> viewHours(@RequestParam int page, @RequestParam int size) {
-        List<UserHoursDto> userHoursDtos = userService.findAllHoursByAdmin(page, size);
-        return new ResponseEntity<>(userHoursDtos, HttpStatus.OK);
+        List<UserHoursDto> userHoursDtoList = userService.findAllHoursByAdmin(page, size);
+        return new ResponseEntity<>(userHoursDtoList, HttpStatus.OK);
     }
 
 }
